@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Keuangan Harian</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dashboard {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+            margin: 5px;
+            font-size: 18px;
+        }
+            table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 12px; /* Ukuran font diperkecil */
+}
+
+th, td {
+    border: 1px solid black;
+    padding: 6px; /* Padding dikurangi agar tabel lebih rapat */
+    text-align: center;
+}
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        input, select {
+            width: 95%;
+            padding: 8px;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-add {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-clear {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-save {
+            background-color: #007bff;
+            color: white;
+        }
+@media screen and (max-width: 768px) {
+    .container {
+        max-width: 100%;
+        padding: 15px;
+    }
+    .dashboard {
+        flex-direction: column;
+        align-items: center;
+    }
+    .box {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .form-container {
+        flex-direction: column;
+    }
+    .button-group {
+        flex-direction: column;
+    }
+    button {
+        width: 100%;
+    }
+    table {
+        font-size: 10px;
+    }
+    th, td {
+        padding: 5px;
+    }
+}
+
+.tagline {
+            text-align: center;
+            font-size: 14px;
+            color: green;
+            font-style: italic;
+        }
+h2 {
+            text-align: center;
+            color: green;
+        }
+.btn-delete {
+    background-color: #ff9800; 
+    color: white;
+}
+.icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    z-index: 10; /* Pastikan tombol dapat diklik */
+}
+
+.icon-btn i {
+    color: #007bff;
+    margin-right: 5px;
+}
+
+.icon-btn.delete i {
+    color: #dc3545;
+}
+
+.settings-form {
+    display: none;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 100;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn-settings {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 101;
+}
+
+    </style>
+</head>
+<body onload="loadData()">
+    <button class="btn-settings" onclick="toggleSettings(event)">
+        <i class="fas fa-cogs"></i>
+    </button>
+    
+    <div class="settings-form" id="settingsForm">
+        <label for="customTitle">Judul Laporan:</label>
+        <input type="text" id="customTitle" placeholder="Masukkan judul baru">
+        <button onclick="saveTitle()">Simpan Judul</button>
+        <button onclick="document.getElementById('settingsForm').style.display='none'">Batal</button>
+    </div>
+    <div class="container">
+        <h2 id="laporanTitle"style="text-align: center;">LAPORAN KEUANGAN HARIAN</h2>
+<p class="tagline">Mengelola keuangan Anda dengan lebih baik</p>
+        <div class="dashboard">
+            <div class="box">Pemasukan: Rp <span id="totalPemasukan">0</span></div>
+            <div class="box">Pengeluaran: Rp <span id="totalPengeluaran">0</span></div>
+            <div class="box">Saldo Akhir: Rp <span id="saldoAkhir">0</span></div>
+        </div>
+        
+        <h3 style="text-align: center;">Tambah Transaksi</h3>
+        <div class="form-container">
+            <div class="form-group">
+                <label for="tanggal">Tanggal:</label>
+                <input type="date" id="tanggal">
+            </div>
+            <div class="form-group">
+                <label for="keterangan">Keterangan:</label>
+                <input type="text" id="keterangan" placeholder="Masukkan keterangan transaksi">
+            </div>
+            <div class="form-group">
+                <label for="tipe">Tipe Transaksi:</label>
+                <select id="tipe">
+                    <option value="pemasukan">Pemasukan</option>
+                    <option value="pengeluaran">Pengeluaran</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="jumlah">Jumlah (Rp):</label>
+                <input type="number" id="jumlah" placeholder="0">
+            </div>
+        </div>
+        <div class="button-group">
+            <button class="btn-add" onclick="tambahTransaksi()">Tambah Transaksi</button>
+            <button class="btn-clear" onclick="clearData()">Hapus Semua Data</button>
+            <button class="btn-save" onclick="simpanPDF()">Simpan PDF</button>
+<button class="btn-update" onclick="updateTransaksi()">Update Transaksi</button>
+
+        </div>
+      
+         
+        <h3 style="text-align: center;">Data Keuangan</h3>
+       
+        <div class="form-group">
+    <label for="searchDate"><strong>Cari berdasarkan tanggal:</strong></label>
+    <input type="date" id="searchDate" oninput="filterData()">
+</div>
+          <table id="laporanTable">
+    <thead>
+        <tr>
+            <th>Tanggal</th>
+            <th>Keterangan</th>
+            <th>Pemasukan (Rp)</th>
+            <th>Pengeluaran (Rp)</th>
+            <th>Saldo (Rp)</th>
+            <th>Aksi</th> <!-- Tambahkan kolom ini -->
+        </tr>
+    </thead>
+    <tbody id="data-keuangan"></tbody>
+</table>
+
+    </div>
+    
+    <script>
+        
+// Fungsi untuk menampilkan atau menyembunyikan form pengaturan
+function toggleSettings(event) {
+    event.stopPropagation();  // Mencegah klik ini mempengaruhi event di luar form
+
+    let settingsForm = document.getElementById("settingsForm");
+    settingsForm.style.display = settingsForm.style.display === "flex" ? "none" : "flex";
+}
+// Fungsi untuk menyimpan judul dan menyembunyikan form pengaturan setelah disimpan
+function saveTitle() {
+    let newTitle = document.getElementById("customTitle").value;
+    if (newTitle) {
+        localStorage.setItem("customTitle", newTitle);
+        document.getElementById("laporanTitle").innerText = newTitle;
+        document.getElementById("settingsForm").style.display = "none";
+        alert("Judul berhasil disimpan!");
+    } else {
+        alert("Judul tidak boleh kosong!");
+    }
+}
+
+
+// Menyembunyikan form pengaturan jika pengguna mengklik di luar form
+document.addEventListener("click", function(event) {
+    let settingsForm = document.getElementById("settingsForm");
+    let settingsButton = document.querySelector(".btn-settings");
+
+    // Cek apakah klik terjadi di luar form pengaturan dan tombol pengaturan
+    if (!settingsForm.contains(event.target) && !settingsButton.contains(event.target)) {
+        settingsForm.style.display = "none";  // Menyembunyikan form jika klik di luar area
+    }
+});
+
+
+ function formatDate(dateStr) {
+            let parts = dateStr.split("-");
+            return `${parts[2]},${parts[1]},${parts[0]}`;
+        }
+        
+        function updateDate() {
+            let today = new Date().toISOString().split("T")[0];
+            document.getElementById("tanggal").value = today;
+        }
+        function tambahTransaksi() {
+    let tanggal = document.getElementById("tanggal").value;
+    let keterangan = document.getElementById("keterangan").value;
+    let tipe = document.getElementById("tipe").value;
+    let jumlah = parseFloat(document.getElementById("jumlah").value) || 0;
+    
+    if (!tanggal || !keterangan || jumlah <= 0) {
+        alert("Harap isi semua kolom dengan benar");
+        return;
+    }
+    
+    // Ambil data yang sudah ada di localStorage
+    let data = JSON.parse(localStorage.getItem("keuangan")) || [];
+    
+    // Tambahkan transaksi baru ke data
+    data.push({ tanggal, keterangan, tipe, jumlah });
+    
+    // Simpan data kembali ke localStorage
+    localStorage.setItem("keuangan", JSON.stringify(data));
+    alert("Transaksi berhasil ditambahkan!");
+
+    // Update data di halaman tanpa melakukan reload
+    loadData();
+
+    // Reset keterangan, tipe, dan jumlah, tapi biarkan tanggal tetap ada
+    document.getElementById("keterangan").value = "";
+    document.getElementById("tipe").value = "pengeluaran";
+    document.getElementById("jumlah").value = "";
+}
+
+
+       function loadData() {
+
+        let savedTitle = localStorage.getItem("customTitle");
+    if (savedTitle) {
+        document.getElementById("laporanTitle").innerText = savedTitle;
+        document.getElementById("customTitle").value = savedTitle; // Isi juga input field jika ada
+    }
+    let data = JSON.parse(localStorage.getItem("keuangan")) || [];
+    // Urutkan data berdasarkan tanggal (dari yang paling awal)
+    data.sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+    let saldoAkhir = 0;
+    let pemasukan = 0;
+    let pengeluaran = 0;
+    let tableBody = "";
+
+    data.forEach((item, index) => {
+        let pemasukanVal = item.tipe === "pemasukan" ? item.jumlah : 0;
+        let pengeluaranVal = item.tipe === "pengeluaran" ? item.jumlah : 0;
+        saldoAkhir += pemasukanVal - pengeluaranVal;
+        pemasukan += pemasukanVal;
+        pengeluaran += pengeluaranVal;
+
+        tableBody += `
+            <tr>
+                <td>${item.tanggal}</td>
+                <td>${item.keterangan}</td>
+                <td>${pemasukanVal.toLocaleString()}</td>
+                <td>${pengeluaranVal.toLocaleString()}</td>
+                <td>${saldoAkhir.toLocaleString()}</td>
+                <td>
+                    <button onclick="editTransaksi(${index})" class="icon-btn">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="hapusTransaksi(${index})" class="icon-btn delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>`;
+    });
+
+    document.getElementById("data-keuangan").innerHTML = tableBody;
+    document.getElementById("saldoAkhir").textContent = saldoAkhir.toLocaleString();
+    document.getElementById("totalPemasukan").textContent = pemasukan.toLocaleString();
+    document.getElementById("totalPengeluaran").textContent = pengeluaran.toLocaleString();
+}
+
+        
+        function clearData() {
+            if (confirm("Apakah Anda yakin ingin menghapus semua data?")) {
+                localStorage.removeItem("keuangan");
+                loadData();
+            }
+        }
+
+
+  
+function filterData() {
+    let searchDate = document.getElementById("searchDate").value;
+    let data = JSON.parse(localStorage.getItem("keuangan")) || [];
+    let saldoAkhir = 0;
+    let pemasukan = 0;
+    let pengeluaran = 0;
+    let tableBody = "";
+
+    data.forEach((item, index) => {
+        if (searchDate === "" || item.tanggal === searchDate) {
+            let pemasukanVal = item.tipe === "pemasukan" ? item.jumlah : 0;
+            let pengeluaranVal = item.tipe === "pengeluaran" ? item.jumlah : 0;
+            saldoAkhir += pemasukanVal - pengeluaranVal;
+            pemasukan += pemasukanVal;
+            pengeluaran += pengeluaranVal;
+
+            tableBody += `
+                <tr>
+                    <td>${item.tanggal}</td>
+                    <td>${item.keterangan}</td>
+                    <td>${pemasukanVal.toLocaleString()}</td>
+                    <td>${pengeluaranVal.toLocaleString()}</td>
+                    <td>${saldoAkhir.toLocaleString()}</td>
+                    <td>
+                        <button onclick="editTransaksi(${index})" class="icon-btn">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="hapusTransaksi(${index})" class="icon-btn delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+        }
+    });
+
+    document.getElementById("data-keuangan").innerHTML = tableBody;
+}
+
+function simpanPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    let data = JSON.parse(localStorage.getItem("keuangan")) || [];
+    
+    if (data.length === 0) {
+        alert("Tidak ada data untuk disimpan!");
+        return;
+    }
+
+    // Urutkan data berdasarkan tanggal
+    data.sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+    // Ambil tanggal pertama dan terakhir
+    let firstDate = new Date(data[0].tanggal);
+    let lastDate = new Date(data[data.length - 1].tanggal);
+
+    // Format tanggal untuk ditampilkan
+    function formatDateDisplay(date) {
+        let day = date.getDate();
+        let month = date.getMonth() + 1; // Bulan dimulai dari 0
+        let year = date.getFullYear();
+        return `${day} ${getMonthName(month)} ${year}`;
+    }
+
+    // Fungsi untuk mendapatkan nama bulan dalam Bahasa Indonesia
+    function getMonthName(monthNumber) {
+        const months = [
+            "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+            "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ];
+        return months[monthNumber - 1];
+    }
+
+    // Ambil judul dari halaman
+    let title = document.getElementById("laporanTitle").innerText;
+
+    // Buat judul PDF dengan rentang tanggal
+    let fullTitle = `${title}\nPeriode: ${formatDateDisplay(firstDate)} - ${formatDateDisplay(lastDate)}`;
+
+    doc.setFontSize(14);
+    doc.text(fullTitle, doc.internal.pageSize.width / 2, 15, { align: "center" });
+
+    // Simpan tabel transaksi
+    let transaksiData = [];
+    let saldoKumulatif = 0; // Variabel untuk menghitung saldo kumulatif
+
+    // Tambahkan data transaksi ke dalam tabel
+    for (let i = 0; i < data.length; i++) {
+        let rowData = [];
+        rowData.push(data[i].tanggal);
+        rowData.push(data[i].keterangan);
+        
+        // Pemasukan dan Pengeluaran
+        rowData.push(data[i].tipe === "pemasukan" ? data[i].jumlah.toLocaleString() : "");
+        rowData.push(data[i].tipe === "pengeluaran" ? data[i].jumlah.toLocaleString() : "");
+
+        // Hitung saldo kumulatif
+        if (data[i].tipe === "pemasukan") {
+            saldoKumulatif += data[i].jumlah;
+        } else if (data[i].tipe === "pengeluaran") {
+            saldoKumulatif -= data[i].jumlah;
+        }
+
+        // Masukkan saldo kumulatif dalam tabel
+        rowData.push(saldoKumulatif.toLocaleString()); // Saldo Kumulatif
+        transaksiData.push(rowData);
+    }
+
+    // Menyimpan tabel transaksi dalam PDF
+    doc.autoTable({
+        head: [['Tanggal', 'Keterangan', 'Pemasukan (Rp)', 'Pengeluaran (Rp)', 'Saldo (Rp)']],
+        body: transaksiData,
+        startY: 30,
+        margin: { top: 30 }
+    });
+
+    // Ambil total pemasukan, pengeluaran, dan saldo akhir dari halaman
+    let totalPemasukan = document.getElementById("totalPemasukan").innerText;
+    let totalPengeluaran = document.getElementById("totalPengeluaran").innerText;
+    let saldoAkhir = document.getElementById("saldoAkhir").innerText;
+
+    // Tampilkan informasi neraca di bagian bawah tabel
+    let neracaData = [
+        ["Total Pemasukan", `Rp ${totalPemasukan}`],
+        ["Total Pengeluaran", `Rp ${totalPengeluaran}`],
+        ["Saldo Akhir", `Rp ${saldoAkhir}`]
+    ];
+
+    doc.autoTable({
+        head: [['Kategori', 'Jumlah']],
+        body: neracaData,
+        startY: doc.autoTable.previous.finalY + 20
+    });
+
+    // Simpan file PDF dengan nama yang sesuai
+    let fileName = `Laporan Keuangan ${getMonthName(firstDate.getMonth() + 1)} ${firstDate.getFullYear()}.pdf`;
+    doc.save(fileName);
+}
+
+let indexEdit = -1; // Menyimpan indeks data yang sedang diedit
+
+function editTransaksi(index) {
+    let data = JSON.parse(localStorage.getItem("keuangan")) || [];
+    let transaksi = data[index];
+if (confirm("Apakah Anda yakin ingin mengedit data ini?"))
+    document.getElementById("tanggal").value = transaksi.tanggal;
+    document.getElementById("keterangan").value = transaksi.keterangan;
+    document.getElementById("tipe").value = transaksi.tipe;
+    document.getElementById("jumlah").value = transaksi.jumlah;
+
+    indexEdit = index; // Simpan indeks transaksi yang akan diedit
+}
+
+function updateTransaksi() {
+    if (indexEdit === -1) {
+        alert("Pilih transaksi yang ingin diperbarui!");
+        return;
+    }
+
+    let data = JSON.parse(localStorage.getItem("keuangan")) || [];
+
+    let tanggal = document.getElementById("tanggal").value;
+    let keterangan = document.getElementById("keterangan").value;
+    let tipe = document.getElementById("tipe").value;
+    let jumlah = parseFloat(document.getElementById("jumlah").value) || 0;
+
+    if (!tanggal || !keterangan || jumlah <= 0) {
+        alert("Harap isi semua kolom dengan benar");
+        return;
+    }
+
+    // Perbarui data di indeks yang sedang diedit
+    data[indexEdit] = { tanggal, keterangan, tipe, jumlah };
+
+    // Simpan kembali ke localStorage
+    localStorage.setItem("keuangan", JSON.stringify(data));
+
+    // Reset form dan indeks edit
+    indexEdit = -1;
+    document.getElementById("tanggal").value = "";
+    document.getElementById("keterangan").value = "";
+    document.getElementById("tipe").value = "pengeluaran";
+    document.getElementById("jumlah").value = "";
+
+    loadData(); // Perbarui tampilan tabel
+}
+function hapusTransaksi(index) {
+    let data = JSON.parse(localStorage.getItem("keuangan")) || [];
+
+    if (confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) {
+        data.splice(index, 1); // Hapus transaksi pada indeks yang dipilih
+        localStorage.setItem("keuangan", JSON.stringify(data)); // Simpan kembali ke localStorage
+        loadData(); // Perbarui tabel
+    }
+}
+
+document.querySelectorAll('.icon-btn.delete').forEach((button, index) => {
+    button.addEventListener('click', () => hapusTransaksi(index));
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    let buttons = document.querySelectorAll(".icon-btn.delete");
+    buttons.forEach((button, index) => {
+        button.addEventListener("click", () => hapusTransaksi(index));
+    });
+});
+
+    </script>
+</script>
+        <footer style="text-align: center; margin-top: 20px; font-size: 10px; color: #555;">
+        © <span id="year"></span> Laporan Keuangan Harian Oleh Ivan Hadian. Semua Hak Cipta Dilindungi.
+    </footer>
+
+    <script>
+        document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>
